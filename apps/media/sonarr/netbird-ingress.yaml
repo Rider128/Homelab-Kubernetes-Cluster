@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sonarr-netbird-ingress
+  namespace: medias
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: sonarr.proxy.daniel-thomas.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sonarr
+                port:
+                  number: 8989

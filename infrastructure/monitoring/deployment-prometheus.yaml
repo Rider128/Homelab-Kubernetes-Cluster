@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-server
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-server
+  template:
+    metadata:
+      labels:
+        app: prometheus-server
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v3.15.0
+        ports:
+        - containerPort: 9090
+          name: http-prometheus
+          protocol: TCP
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+        - mountPath: /prometheus
+          name: prometheus-pv
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-server-conf
+          defaultMode: 420
+      - name: prometheus-pv
+        persistentVolumeClaim:
+          claimName: prometheus-config-nfs

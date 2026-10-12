@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist Vault/OpenBao remoteRef paths in ExternalSecrets"
+regexes = [
+  '''key:\s*secret/ridercorp/kubernetes/''',
+  '''secret/ridercorp/kubernetes/'''
+]

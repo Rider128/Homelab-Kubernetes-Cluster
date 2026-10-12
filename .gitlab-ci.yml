@@ -1,0 +1,11 @@
+stages:
+  - test
+
+variables:
+  NIX_CONFIG: "experimental-features = nix-command flakes"
+
+check:
+  stage: test
+  image: ghcr.io/lix-project/lix:latest
+  script:
+    - nix flake check --print-build-logs

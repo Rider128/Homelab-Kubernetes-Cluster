@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &appName couchdb
+  namespace: *appName
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  values:
+    controllers:
+      couchdb:
+        replicas: 1
+        containers:
+          app:
+            image:
+              repository: couchdb
+              tag: 3.5.2.1
+            env:
+              TZ: Europe/Paris
+              COUCHDB_USER:
+                valueFrom:
+                  secretKeyRef:
+                    name: couchdb
+                    key: COUCHDB_USER
+              COUCHDB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: couchdb
+                    key: COUCHDB_PASSWORD
+              COUCHDB_SINGLE_NODE: "true"
+
+            securityContext:
+              allowPrivilegeEscalation: false
+            ports:
+              - name: http
+                containerPort: &httpPort 8080
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                memory: 3Gi
+    service:
+      app:
+        controller: *appName
+        type: ClusterIP
+        ports:
+          http:
+            port: 5984
+    ingress:
+      app:
+        enabled: true
+        className: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+          traefik.ingress.kubernetes.io/router.tls.certresolver: myresolver
+
+        hosts:
+          - host: couchdb.ridercorp.org
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: http
+
+    persistence:
+      storage:
+        enabled: true
+        existingClaim: couchdb
+        globalMounts:
+          - path: /opt/couchdb/data
+      cors-config:
+              type: configMap
+              name: couchdb-cors-config
+              globalMounts:
+                - path: /opt/couchdb/etc/local.d/cors.ini
+                  subPath: cors.ini
+                  readOnly: true

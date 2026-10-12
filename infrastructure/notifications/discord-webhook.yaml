@@ -1,0 +1,59 @@
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: discord
+  namespace: flux-system
+spec:
+  type: discord
+  secretRef:
+    name: discord-webhook
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: discord
+  namespace: flux-system
+spec:
+  summary: "FluxCD Activity Alert"
+  providerRef:
+    name: discord
+  eventSeverity: info
+  eventSources:
+    - kind: GitRepository
+      name: '*'
+    - kind: Kustomization
+      name: '*'
+    - kind: HelmRelease
+      name: '*'
+    - kind: HelmChart
+      name: '*'
+    - kind: HelmRepository
+      name: '*'
+    - kind: ImageRepository
+      name: '*'
+    - kind: ImagePolicy
+      name: '*'
+    - kind: ImageUpdateAutomation
+      name: '*'
+    - kind: OCIRepository
+      name: '*'
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: discord-webhook
+  namespace: flux-system
+spec:
+  refreshInterval: "5m"
+  secretStoreRef:
+    name: openbao
+    kind: ClusterSecretStore
+  target:
+    name: discord-webhook
+    creationPolicy: Owner
+  data:
+    - secretKey: address
+      remoteRef:
+        key: secret/ridercorp/kubernetes/flux
+        property: DISCORD_WEBHOOK_URL

@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: vaultwarden-config-nfs
+spec:
+  storageClassName: nfs
+  capacity:
+    storage: 1Mi # Size does not matter
+  accessModes: ["ReadWriteMany"]
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: truenas.internal
+    path: /mnt/grappe/storage/kube/vaultwarden
+  mountOptions:
+    - nfsvers=4.2
+    - nconnect=8
+    - hard
+    - noatime
+    - rsize=131072
+    - wsize=131072
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vaultwarden-config-nfs
+  namespace: vaultwarden
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: nfs
+  volumeName: vaultwarden-config-nfs
+  resources:
+    requests:
+      storage: 1Mi # Size does not matter

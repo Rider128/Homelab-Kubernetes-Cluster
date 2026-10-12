@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+**/.DS_Store
+
+# Version Control / Jujutsu
+.jj/
+
+# Nix / Builds
+result
+result-*
+
+# Secrets & Local Env (Securité)
+*.env
+*.env.*
+*.secret
+*.key
+*.pem
+*.pfx
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

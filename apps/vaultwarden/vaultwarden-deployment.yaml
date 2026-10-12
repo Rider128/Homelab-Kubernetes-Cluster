@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      containers:
+        - name: vaultwarden
+          image: vaultwarden/server:1.37.4
+          env:
+            - name: DOMAIN
+              value: "https://vaultwarden.daniel-thomas.fr"
+            - name: SIGNUPS_ALLOWED
+              value: "false"
+            - name: SMTP_HOST
+              value: "smtp.gmail.com"
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_SECURITY
+              value: "starttls"
+            - name: SMTP_FROM
+              value: "vaultwarden@daniel-thomas.fr"
+            - name: SMTP_USERNAME
+              value: "ridercorp.information@gmail.com"
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden
+                  key: smtp-password
+
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden
+                  key: admin-token
+          ports:
+            - containerPort: 80
+              name: vaultwarden
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: vaultwarden-pvc
+              mountPath: /data
+      volumes:
+        - name: vaultwarden-pvc
+          persistentVolumeClaim:
+            claimName: vaultwarden-config-nfs

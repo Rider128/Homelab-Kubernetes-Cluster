@@ -1,0 +1,20 @@
+# https://kubernetes.io/docs/concepts/services-networking/service/
+apiVersion: v1
+kind: Service
+metadata:
+  name: context7 
+
+  namespace: ia
+spec:
+  selector:
+    app: context7 
+
+  type: ClusterIP
+  ports:
+  - name: 
+
+    protocol: TCP
+    port: 8080
+    targetPort: mcp-context7 
+---
+

@@ -1,0 +1,89 @@
+
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: traefik
+      version: '41.7.1'
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+        namespace: traefik
+      interval: 2h
+  values:
+    podSecurityContext:
+      fsGroup: 65532
+      fsGroupChangePolicy: "OnRootMismatch"
+    ports:
+      web:
+        exposedPort: 80
+      websecure:
+        exposedPort: 443
+    fullnameOverride: traefik
+    ingressClass:
+      enabled: true
+      isDefaultClass: true
+    ingressRoute:
+      dashboard:
+        enabled: true
+        matchRule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+    providers:
+      kubernetesCRD:
+        enabled: true
+        allowCrossNamespace: true
+      kubernetesIngress:
+        enabled: true
+        ingressClass: traefik
+
+    service:
+      enabled: true
+      type: LoadBalancer
+      ports:
+        web:
+          port: 80
+          expose: true
+          targetPort: 80
+        websecure:
+          port: 443
+          expose: true
+          targetPort: 443
+          tls:
+            enabled: true
+            certResolver: myresolver
+    deployment:
+      initContainers:
+        - name: volume-permissions
+          image: busybox:latest
+          command: ["sh", "-c", "touch /data/acme.json; chmod -v 600 /data/acme.json"]
+          volumeMounts:
+          - mountPath: /data
+            name: ssl-certs
+    log:
+      level: DEBUG
+    additionalArguments:
+      - "--certificatesresolvers.myresolver.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53"
+      - "--certificatesresolvers.myresolver.acme.email=ridergogo00@gmail.com"
+      - "--api.insecure=true"
+      - "--serversTransport.insecureSkipVerify=true"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+    env:
+      - name: CLOUDFLARE_DNS_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: traefik-secrets
+            key: CLOUDFLARE_DNS_API_TOKEN
+
+    persistence:
+      enabled: true
+      name: ssl-certs
+      existingClaim: traefik-config-nfs
+      path: /data

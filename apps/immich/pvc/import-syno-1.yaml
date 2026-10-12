@@ -1,0 +1,42 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: import-syno-1
+provisioner: nfs
+parameters:
+  archiveOnDelete: "false"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: import-syno-1
+spec:
+  storageClassName: import-syno-1
+  capacity:
+    storage: 1Mi # Size does not matter
+  accessModes: ["ReadOnlyMany"]
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: synology.internal
+    path: /volume1/photo
+  mountOptions:
+    - nfsvers=4.0
+    - soft        # Pas de blocage si le NFS est down
+    - timeo=100   # Timeout rapide (10s)
+    - retrans=3
+    - noatime
+    - ro
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: import-syno-1
+  namespace: immich
+spec:
+  accessModes: ["ReadOnlyMany"]
+  storageClassName: import-syno-1
+  volumeName: import-syno-1
+  resources:
+    requests:
+      storage: 1Mi # Size does not matter

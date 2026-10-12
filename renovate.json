@@ -1,0 +1,43 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "flux": {
+    "enabled": true,
+    "managerFilePatterns": [
+      "/release\\.ya?ml$/",
+      "/helm-release\\.ya?ml$/",
+      "/helm-repo\\.ya?ml$/",
+      "/helm-repository\\.ya?ml$/",
+      "/repository\\.ya?ml$/",
+      "/kustomization\\.ya?ml$/"
+    ]
+  },
+  "helm-values": {
+    "enabled": true,
+    "managerFilePatterns": [
+      "/release\\.ya?ml$/",
+      "/helm-release\\.ya?ml$/"
+    ]
+  },
+  "kubernetes": {
+    "enabled": true,
+    "managerFilePatterns": [
+      "/\\.ya?ml$/"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Ignorer les mises à jour des composants Flux système (gotk-components, flux-system)",
+      "matchFileNames": ["**/flux-system/**"],
+      "enabled": false
+    },
+    {
+      "description": "Auto-merger les mises à jour patch et minor",
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "platformAutomerge": true
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: open-webui
+  namespace: ia
+spec:
+  interval: 2h
+  chart:
+    spec:
+      chart: app-template
+      version: 4.4.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+      interval: 10m
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+
+        containers:
+          main:
+            image:
+              repository: ghcr.io/open-webui/open-webui
+              tag: v0.12.0
+              pullPolicy: IfNotPresent
+
+            env:
+              TZ: "Europe/Paris"
+              WEBUI_UI: "https://ia.ridercorp.org"
+              CORS_ALLOW_ORIGIN: "https://ia.ridercorp.org"
+              ## LITTLELLM
+              OPENAI_API_BASE_URL: "http://litellm.ia.svc.cluster.local:4000"
+              OPENAI_API_KEY: "sk-test"
+              ENABLE_OLLAMA_API: "false"
+              ENABLE_WEB_SEARCH: "true"
+              WEB_SEARCH_ENGINE: "tavily"
+              WEB_LOADER_ENGINE: "tavily"
+              TAVILY_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: ia-keys
+                    key: tavily-key
+            resources:
+              requests:
+                cpu: 250m
+                memory: 512Mi
+              limits:
+                cpu: 2
+                memory: 2Gi
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+          traefik.ingress.kubernetes.io/router.tls.certresolver: myresolver
+        hosts:
+          - host: ia.ridercorp.org
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: 8080
+    persistence:
+      config:
+        enabled: true
+        existingClaim: open-webui-config-nfs
+        globalMounts:
+          - path: /app/backend/data
+
+
+

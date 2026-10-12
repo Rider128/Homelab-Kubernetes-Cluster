@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: medias
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyfin
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      restartPolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - kube-quartz
+      containers:
+        - name: jellyfin
+          image: ghcr.io/linuxserver/jellyfin:10.11.11
+          ports:
+            - containerPort: 8096
+              name: http-jellyfin
+              protocol: TCP
+          env:
+            - name: PUID
+              value: "1001"
+            - name: PGID
+              value: "129"
+            - name: TZ
+              value: "Europe/Paris"
+          resources:
+            requests:
+              memory: 4Gi
+          volumeMounts:
+            - name: jellyfin-config
+              mountPath: /config
+            - name: jellyfin-cache
+              mountPath: /config/cache
+            - name: jellyfin-transcode
+              mountPath: /transcode
+            - name: truenas-movies
+              mountPath: /data/movies
+              readOnly: false
+            - name: truenas-series
+              mountPath: /data/series
+              readOnly: false
+            - name: truenas-anime
+              mountPath: /data/anime
+              readOnly: false
+
+      volumes:
+        - name: jellyfin-config
+          persistentVolumeClaim:
+            claimName: jellyfin-config-nfs
+
+        # stockage local (disque) pour le cache
+        - name: jellyfin-cache
+          emptyDir:
+            sizeLimit: 20Gi
+
+        # stockage local (disque) pour le transcode
+        - name: jellyfin-transcode
+          emptyDir:
+            sizeLimit: 20Gi
+
+        # NFS mounts
+        - name: truenas-movies
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Films"
+            readOnly: false
+        - name: truenas-series
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Series"
+            readOnly: false
+        - name: truenas-anime
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Anime"
+            readOnly: false

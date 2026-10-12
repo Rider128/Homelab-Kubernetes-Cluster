@@ -1,0 +1,51 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gitlab-runner
+  namespace: gitlab-runner
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: gitlab-runner
+      version: '0.93.0'
+      sourceRef:
+        kind: HelmRepository
+        name: gitlab
+        namespace: gitlab-runner
+      interval: 2h
+  values:
+    imagePullSecrets:
+      - name: gitlab-runner-secret
+    rbac:
+      create: true
+    serviceAccount:
+      create: true
+      name: gitlab-runner
+    gitlabUrl: "https://gitlab.innovalia.cc"
+    runners:
+      secret: gitlab-runner-secret
+      config: |
+        [[runners]]
+          name = "kubernetes-runner"
+          url = "https://gitlab.innovalia.cc"
+          token = "..."
+          executor = "kubernetes"
+          output_limit = 51200
+          [runners.kubernetes]
+            namespace = "gitlab-runner"
+            image = "alpine:latest"
+            pull_policy = ["if-not-present"]
+            allowed_pull_policies = ["always", "if-not-present"]
+            privileged = false
+            [runners.kubernetes.node_affinity]
+              [runners.kubernetes.node_affinity.node_anti_affinity]
+                key = "kubernetes.io/hostname"
+                operator = "NotIn"
+                values = ["kube-quartz"]
+          [runners.kubernetes.resources]
+            limit_memory = "4Gi"
+            limit_cpu = "4"
+            request_memory = "1Gi"
+            request_cpu = "1"
+    imagePullPolicy: IfNotPresent

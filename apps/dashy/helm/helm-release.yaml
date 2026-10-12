@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &appName dashy
+  namespace: *appName
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: app-template
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  values:
+    controllers:
+      dashy:
+        replicas: 2
+        containers:
+          app:
+            image:
+              repository: ghcr.io/lissy93/dashy
+              tag: 4.8.1@sha256:8c00203a5ed0ceeeaf773d38ddd656d7ba7151029fac1e75a2ae4245694b8619
+            env:
+              TZ: Europe/Paris
+              UID: 1000
+              GID: 1000
+            securityContext:
+              allowPrivilegeEscalation: false
+            ports:
+              - name: http
+                containerPort: &httpPort 8080
+            resources:
+              requests:
+                cpu: 10m
+                memory: 128Mi
+              limits:
+                memory: 3Gi
+    service:
+      app:
+        controller: dashy
+        type: ClusterIP
+        ports:
+          http:
+            port: *httpPort
+            protocol: TCP
+    ingress:
+      app:
+        enabled: true
+        className: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+          traefik.ingress.kubernetes.io/router.tls.certresolver: myresolver
+
+        hosts:
+          - host: ridercorp.org
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: app
+                  port: http
+        tls:
+          - hosts:
+              - ridercorp.org
+
+    persistence:
+      config-file:
+        type: secret
+        name: dashy-config-secret
+        globalMounts:
+          - path: /app/user-data/conf.yml
+            subPath: config.yaml
+            readOnly: true

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr
+  namespace: medias
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prowlarr
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: prowlarr
+    spec:
+      restartPolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - kube-quartz
+      containers:
+        - name: prowlarr
+          image: lscr.io/linuxserver/prowlarr:nightly-2.6.5.5620-ls16
+          ports:
+            - containerPort: 9696
+              name: http-prowlarr
+              protocol: TCP
+          env:
+            - name: PUID
+              value: "1001"
+            - name: PGID
+              value: "129"
+            - name: TZ
+              value: "Europe/Paris"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: prowlarr-config
+              mountPath: /config
+            - name: truenas-movies
+              mountPath: /data/movies
+              readOnly: true
+            - name: truenas-series
+              mountPath: /data/series
+              readOnly: true
+            - name: truenas-anime
+              mountPath: /data/anime
+              readOnly: true
+
+      volumes:
+        - name: prowlarr-config
+          persistentVolumeClaim:
+            claimName: prowlarr-config-nfs
+        # NFS Mounts
+        - name: truenas-movies
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Films"
+            readOnly: true
+        - name: truenas-series
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Series"
+            readOnly: true
+        - name: truenas-anime
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Anime"
+            readOnly: true

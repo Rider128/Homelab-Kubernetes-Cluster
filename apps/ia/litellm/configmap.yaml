@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config
+  namespace: ia
+data:
+  litellm_config.yaml: |
+    model_list:
+      # Main model
+      - model_name: gpt-smart
+        litellm_params:
+          model: ollama/gemma4:26b
+          api_base: "http://ollama:11434"
+      - model_name: local-fast
+        litellm_params:
+          model: ollama/qwen3.5:4b
+          api_base: "http://ollama:11434"
+      # Gemini Backup model
+      - model_name: google-gemini
+        litellm_params:
+          model: gemini/gemini-2.5-flash
+          api_key: os.environ/GEMINI_API_KEY
+      # Anthropic backup model
+      - model_name: claude-4
+        litellm_params:
+          model: openrouter/anthropic/claude-sonnet-4-6
+          api_key: "os.environ/OPENROUTER_API_KEY"
+
+      # Deepseek model
+      - model_name: deepseek-v4-pro
+        litellm_params:
+          model: openrouter/deepseek/deepseek-v4-pro
+          api_key: "os.environ/OPENROUTER_API_KEY"
+      - model_name: deepseek-v4-flash
+        litellm_params:
+          model: openrouter/deepseek/deepseek-v4-flash
+          api_key: "os.environ/OPENROUTER_API_KEY"
+          
+    router_settings:
+      
+      routing_strategy: usage-based-routing
+    litellm_settings:
+      enable_pre_call_checks: true
+      num_retries: 1
+      request_timeout: 300
+      cooldown_time: 120
+      allowed_fails: 0
+      fallbacks: [{"gpt-smart": ["google-gemini"]}] 
+

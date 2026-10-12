@@ -1,0 +1,114 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nextcloud
+  namespace: nextcloud
+spec:
+  interval: 2h
+  chart:
+    spec:
+      chart: nextcloud
+      version: "9.4.0"
+      sourceRef:
+        kind: HelmRepository
+        name: nextcloud
+        namespace: nextcloud
+      interval: 10m
+  values:
+    ingress:
+      enabled: true
+      annotations:
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        traefik.ingress.kubernetes.io/router.tls: "true"
+        traefik.ingress.kubernetes.io/router.tls.certresolver: myresolver
+    replicaCount: 1
+    nextcloud:
+      host: &domain nextcloud.daniel-thomas.fr
+      existingSecret:
+        enabled: true
+        secretName: nextcloud
+        usernameKey: username
+        passwordKey: password
+        smtpHostKey: smtp-host
+        smtpUsernameKey: smtp-username
+        smtpPasswordKey: smtp-password
+      trustedDomains:
+        - *domain
+      extraEnv:
+        - name: TRUSTED_PROXIES
+          value: "10.42.0.0/16 10.43.0.0/16"
+        - name: FORWARDED_FOR_HEADERS
+          value: "HTTP_X_FORWARDED_FOR"
+        - name: OVERWRITEHOST
+          value: "nextcloud.daniel-thomas.fr"
+        - name: OVERWRITECLIURL
+          value: "https://nextcloud.daniel-thomas.fr"
+        - name: OVERWRITEPROTOCOL
+          value: "https"
+      mail:
+        enabled: true
+        fromAddress: "no-reply@daniel-thomas.fr"
+        domain: "daniel-thomas.fr"
+        smtp:
+          port: 25
+          authtype: ""
+    livenessProbe:
+      initialDelaySeconds: 120
+      timeoutSeconds: 15
+      periodSeconds: 30
+      failureThreshold: 5
+    readinessProbe:
+      initialDelaySeconds: 120
+      timeoutSeconds: 15
+      periodSeconds: 30
+      failureThreshold: 5
+    startupProbe:
+      enabled: true
+      httpGet:
+        path: /status.php
+        port: 80
+      initialDelaySeconds: 500
+      periodSeconds: 30
+      failureThreshold: 60
+    persistence:
+      enabled: true
+      existingClaim: nextcloud-nextcloud
+      size: 2Gi
+      nextcloudData:
+        enabled: true
+        existingClaim: nextcloud-nextcloud-data
+        size: 50Gi
+
+    metrics:
+      enabled: true
+    redis:
+      enabled: true
+      architecture: standalone
+      master:
+        persistence:
+          enabled: false
+      replica:
+        replicaCount: 0
+    externalDatabase:
+      enabled: true
+      type: postgresql
+      port: "5432"
+      existingSecret:
+        enabled: true
+        secretName: "nextcloud"
+        passwordKey: "pg_pass"
+        usernameKey: "pg_user"
+        hostKey: "host"
+        databaseKey: "pg_db"
+    internalDatabase:
+      enabled: false
+    collabora:
+      enabled: true
+      ingress:
+        enabled: true
+      hosts:
+        - host: collabora.daniel-thomas.fr
+          paths:
+            - path: /
+              pathType: Prefix

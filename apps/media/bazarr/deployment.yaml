@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bazarr
+  namespace: medias
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bazarr
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: bazarr
+    spec:
+      restartPolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - kube-quartz
+      containers:
+        - name: bazarr
+          image: lscr.io/linuxserver/bazarr:v1.5.1-ls297
+          ports:
+            - containerPort: 6767
+              name: http-bazarr
+              protocol: TCP
+          env:
+            - name: PUID
+              value: "1001"
+            - name: PGID
+              value: "129"
+            - name: TZ
+              value: "Europe/Paris"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: bazarr-config
+              mountPath: /config
+            - name: truenas-movies
+              mountPath: /data/movies
+              readOnly: false
+            - name: truenas-series
+              mountPath: /data/series
+              readOnly: false
+            - name: truenas-anime
+              mountPath: /data/anime
+              readOnly: false
+
+      volumes:
+        - name: bazarr-config
+          persistentVolumeClaim:
+            claimName: bazarr-config-nfs
+
+
+        # NFS Mounts
+        - name: truenas-movies
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Films"
+            readOnly: false
+        - name: truenas-series
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Series"
+            readOnly: false
+        - name: truenas-anime
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Anime"
+            readOnly: false

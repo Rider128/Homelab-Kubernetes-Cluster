@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr
+  namespace: medias
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: radarr
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: radarr
+    spec:
+      restartPolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - kube-quartz
+      containers:
+        - name: radarr
+          image: ghcr.io/linuxserver/radarr:6.2.1
+          ports:
+            - containerPort: 7878
+              name: http-radarr
+              protocol: TCP
+          env:
+            - name: PUID
+              value: "1001"
+            - name: PGID
+              value: "129"
+            - name: TZ
+              value: "Europe/Paris"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: radarr-config
+              mountPath: /config
+            - name: truenas-movies
+              mountPath: /data/movies
+            - name: truenas-downloads
+              mountPath: /downloads
+
+      volumes:
+        - name: radarr-config
+          persistentVolumeClaim:
+            claimName: radarr-config-nfs
+        # NFS Mounts
+        - name: truenas-movies
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Medias/Films"
+            readOnly: false
+        - name: truenas-downloads
+          nfs:
+            server: truenas.internal
+            path: "/mnt/grappe/Downloads/Media-Download"
+            readOnly: false

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyseerr 
+  namespace: medias
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyseerr
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: jellyseerr
+    spec:
+      restartPolicy: Always  
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - kube-quartz
+      containers:
+        - name: jellyseerr
+          image: ghcr.io/fallenbagel/jellyseerr:2.7.3
+          ports:
+            - containerPort: 5055
+              name: http-jellyseerr
+              protocol: TCP
+          env:
+            - name: PUID
+              value: "1001"
+            - name: PGID
+              value: "129"
+            - name: TZ
+              value: "Europe/Paris"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: jellyseerr-config
+              mountPath: /app/config
+
+      volumes:
+        - name: jellyseerr-config
+          persistentVolumeClaim:
+            claimName: jellyseerr-config-nfs

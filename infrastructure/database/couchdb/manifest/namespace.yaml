@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=kubernetes
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: couchdb
+  labels:
+    kubernetes.io/metadata.name: couchdb
+    app.kubernetes.io/managed-by: "helm"
+    environment: "production"
+    team: "platform"

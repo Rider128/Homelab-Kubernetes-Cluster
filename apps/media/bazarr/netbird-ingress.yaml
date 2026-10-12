@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bazarr-netbird-ingress
+  namespace: medias
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: bazarr.proxy.daniel-thomas.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bazarr
+                port:
+                  number: 6767

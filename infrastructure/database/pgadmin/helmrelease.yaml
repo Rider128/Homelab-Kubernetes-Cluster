@@ -1,0 +1,81 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2beta2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: pgadmin
+  namespace: pgadmin
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: app-template
+      version: 3.7.3
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  maxHistory: 2
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    controllers:
+      main:
+        containers:
+          app:
+            image:
+              repository: dpage/pgadmin4
+              tag: "9.18"
+            env:
+              PGADMIN_DEFAULT_EMAIL:
+                valueFrom:
+                  secretKeyRef:
+                    name: pgadmin
+                    key: default_user
+              PGADMIN_DEFAULT_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: pgadmin
+                    key: default_password
+
+            resources:
+              requests:
+                cpu: 50m
+                memory: 100Mi
+              limits:
+                memory: 500Mi
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 80
+    ingress:
+      main:
+        enabled: true
+        className: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+          traefik.ingress.kubernetes.io/router.tls.certresolver: myresolver
+        hosts:
+          - host: pgadmin.ridercorp.org
+            paths:
+              - path: /
+                service:
+                  identifier: main
+                  port: http
+    persistence:
+      config:
+        enabled: true
+        existingClaim: pgadmin-config
+        globalMounts:
+          - subPath: pgadmin
+            path: /var/lib/pgadmin
